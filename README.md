@@ -1,3 +1,4 @@
+# api-upload-image
 # Cloudinary Upload API
 
 A minimal Express backend that lets users upload images and stores them in Cloudinary.
