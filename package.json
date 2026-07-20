@@ -1,0 +1,18 @@
+{
+  "name": "cloudinary-upload-api",
+  "version": "1.0.0",
+  "description": "Backend API for uploading and storing images with Cloudinary",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "cloudinary": "^2.5.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "multer": "^2.0.1"
+  }
+}
