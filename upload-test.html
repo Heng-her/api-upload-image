@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cloudinary Upload Test</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 480px;
+        margin: 60px auto;
+        padding: 0 20px;
+        color: #222;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      #dropzone {
+        border: 2px dashed #999;
+        border-radius: 8px;
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        color: #666;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+      }
+      #dropzone.dragover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+      }
+      #fileInput {
+        display: none;
+      }
+      #preview {
+        margin-top: 16px;
+        max-width: 100%;
+        max-height: 240px;
+        display: none;
+        border-radius: 8px;
+      }
+      button {
+        margin-top: 16px;
+        width: 100%;
+        padding: 10px;
+        font-size: 1rem;
+        border: none;
+        border-radius: 6px;
+        background: #3b82f6;
+        color: white;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #aaa;
+        cursor: not-allowed;
+      }
+      #status {
+        margin-top: 12px;
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      #status.error {
+        color: #c0392b;
+      }
+      #status.success {
+        color: #16794f;
+      }
+      #result img {
+        max-width: 100%;
+        border-radius: 8px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Upload an image to Cloudinary</h1>
+
+    <div id="dropzone">
+      Click or drag an image here
+      <input type="file" id="fileInput" accept="image/*" />
+    </div>
+
+    <img id="preview" alt="Preview" />
+
+    <button id="uploadBtn" disabled>Upload</button>
+
+    <div id="status"></div>
+    <div id="result"></div>
+
+    <script>
+      const API_URL = "https://api-upload-image-8ym9.onrender.com/api/upload";
+
+      const dropzone = document.getElementById("dropzone");
+      const fileInput = document.getElementById("fileInput");
+      const preview = document.getElementById("preview");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const status = document.getElementById("status");
+      const result = document.getElementById("result");
+
+      let selectedFile = null;
+
+      dropzone.addEventListener("click", () => fileInput.click());
+
+      dropzone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+
+      dropzone.addEventListener("dragleave", () => {
+        dropzone.classList.remove("dragover");
+      });
+
+      dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("dragover");
+        if (e.dataTransfer.files.length) {
+          handleFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      fileInput.addEventListener("change", () => {
+        if (fileInput.files.length) {
+          handleFile(fileInput.files[0]);
+        }
+      });
+
+      function handleFile(file) {
+        if (!file.type.startsWith("image/")) {
+          showStatus("Please choose an image file.", "error");
+          return;
+        }
+        selectedFile = file;
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+        uploadBtn.disabled = false;
+        status.textContent = "";
+        status.className = "";
+        result.innerHTML = "";
+      }
+
+      uploadBtn.addEventListener("click", async () => {
+        if (!selectedFile) return;
+
+        uploadBtn.disabled = true;
+        showStatus("Uploading...", "");
+        result.innerHTML = "";
+
+        const formData = new FormData();
+        formData.append("image", selectedFile);
+
+        try {
+          const res = await fetch(API_URL, {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.error || "Upload failed");
+          }
+
+          showStatus("Upload successful!", "success");
+          result.innerHTML = `
+        <p><strong>Public ID:</strong> ${data.publicId}</p>
+        <p><strong>Size:</strong> ${data.width} x ${data.height} (${data.format}, ${data.bytes} bytes)</p>
+        <p><strong>URL:</strong> <a href="${data.url}" target="_blank" rel="noopener">${data.url}</a></p>
+        <img src="${data.url}" alt="Uploaded image">
+      `;
+        } catch (err) {
+          showStatus("Error: " + err.message, "error");
+        } finally {
+          uploadBtn.disabled = false;
+        }
+      });
+
+      function showStatus(text, cls) {
+        status.textContent = text;
+        status.className = cls;
+      }
+    </script>
+  </body>
+</html>
