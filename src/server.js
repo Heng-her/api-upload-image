@@ -1,116 +1,85 @@
-require('dotenv').config();
+const express = require("express");
+const helmet = require("helmet");
+const cors = require("cors");
+const morgan = require("morgan");
+const multer = require("multer");
+require("dotenv").config();
 
-const express = require('express');
-const cors = require('cors');
-const multer = require('multer');
-const cloudinary = require('./cloudinary');
+const apiKeyMiddleware = require("./middlewares/apiKey");
+const { ipBlocker } = require("./middlewares/ipBlocker");
+const uploadRateLimiter = require("./middlewares/rateLimiter");
+const uploadRoutes = require("./routes/upload");
+const uploadController = require("./controllers/uploadController");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MAX_UPLOAD_BYTES = Number(process.env.MAX_UPLOAD_BYTES) || 10 * 1024 * 1024; // 10MB default
 
+// Enable trust proxy (1 hop) required for reverse proxies / rate limiting behind proxies (e.g., Render, Heroku)
+app.set("trust proxy", 1);
+
+// Hide x-powered-by header
+app.disable("x-powered-by");
+
+// Security & Utility Middlewares
+app.use(helmet());
 app.use(cors());
+app.use(morgan("combined"));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Keep the file in memory only long enough to stream it to Cloudinary —
-// nothing is written to local disk.
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_UPLOAD_BYTES },
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed'));
-    }
-    cb(null, true);
-  },
+// Health Endpoint (Unauthenticated & Unrestricted)
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
 });
 
-function uploadBufferToCloudinary(buffer, options = {}) {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: 'uploads', resource_type: 'image', ...options },
-      (error, result) => (error ? reject(error) : resolve(result))
-    );
-    stream.end(buffer);
-  });
-}
+// Apply IP blocking check for protected API routes
+app.use("/api", ipBlocker);
 
-// POST /api/upload — accepts multipart/form-data with field name "image"
-app.post('/api/upload', upload.single('image'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image file provided. Use field name "image".' });
-    }
+// Apply API Key authentication for protected API routes
+app.use("/api", apiKeyMiddleware);
 
-    const result = await uploadBufferToCloudinary(req.file.buffer);
+// GET Image Details with nested folder support: GET /api/images/*
+app.get("/api/images/*", uploadController.getImageDetails);
 
-    res.status(201).json({
-      publicId: result.public_id,
-      url: result.secure_url,
-      width: result.width,
-      height: result.height,
-      format: result.format,
-      bytes: result.bytes,
-      createdAt: result.created_at,
-    });
-  } catch (err) {
-    console.error('Upload failed:', err.message);
-    res.status(500).json({ error: 'Upload failed', detail: err.message });
-  }
-});
+// DELETE Image with nested folder support: DELETE /api/images/*
+app.delete("/api/images/*", uploadController.deleteImage);
 
-// GET /api/images/:publicId — fetch stored metadata for an uploaded image
-// publicId may include folder segments, e.g. uploads/abc123
-app.get('/api/images/*publicId', async (req, res) => {
-  try {
-    const publicId = req.params.publicId;
-    const result = await cloudinary.api.resource(publicId);
+// Upload endpoint with rate limiting: POST /api/* (e.g. /api/upload, /api/avatar, /api/blog/2026/july)
+app.use("/api", uploadRateLimiter, uploadRoutes);
 
-    res.json({
-      publicId: result.public_id,
-      url: result.secure_url,
-      width: result.width,
-      height: result.height,
-      format: result.format,
-      bytes: result.bytes,
-      createdAt: result.created_at,
-    });
-  } catch (err) {
-    if (err.http_code === 404) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-    console.error('Fetch failed:', err.message);
-    res.status(500).json({ error: 'Fetch failed', detail: err.message });
-  }
-});
-
-// DELETE /api/images/:publicId — remove an image from Cloudinary
-app.delete('/api/images/*publicId', async (req, res) => {
-  try {
-    const publicId = req.params.publicId;
-    const result = await cloudinary.uploader.destroy(publicId);
-
-    if (result.result !== 'ok') {
-      return res.status(404).json({ error: 'Image not found', detail: result.result });
-    }
-    res.json({ deleted: publicId });
-  } catch (err) {
-    console.error('Delete failed:', err.message);
-    res.status(500).json({ error: 'Delete failed', detail: err.message });
-  }
-});
-
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
-
-// Multer / general error handler (e.g. file too large, wrong file type)
+// Global Error Handler
 app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError || err.message?.includes('image files')) {
-    return res.status(400).json({ error: err.message });
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        error: "File size limit exceeded. Maximum allowed size is 5MB.",
+      });
+    }
+    return res.status(400).json({
+      error: `Upload error: ${err.message}`,
+    });
   }
-  console.error(err);
-  res.status(500).json({ error: 'Unexpected server error' });
+
+  if (err && err.message && err.message.includes("Invalid file type")) {
+    return res.status(400).json({
+      error: err.message,
+    });
+  }
+
+  if (err && err.http_code) {
+    return res.status(err.http_code).json({
+      error: err.message || "Cloudinary operational error.",
+    });
+  }
+
+  console.error("Unhandled Error:", err);
+  return res.status(500).json({
+    error: err.message || "Internal Server Error",
+  });
 });
 
 app.listen(PORT, () => {
-  console.log(`Cloudinary upload API listening on http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
+
+module.exports = app;
