@@ -1,4 +1,4 @@
-const cloudinary = require('../cloudinary');
+const cloudinary = require("../cloudinary");
 
 /**
  * Uploads a file buffer to Cloudinary using upload_stream.
@@ -6,13 +6,15 @@ const cloudinary = require('../cloudinary');
  * @param {string} folder - Destination folder path in Cloudinary
  * @returns {Promise<Object>} Cloudinary upload result
  */
-const uploadBufferToCloudinary = (buffer, folder = '') => {
+const uploadBufferToCloudinary = (buffer, folder = "") => {
   return new Promise((resolve, reject) => {
     const options = {
-      resource_type: 'image'
+      resource_type: "image",
+      format: "webp",
+      quality: "auto",
     };
 
-    if (folder && folder.trim() !== '') {
+    if (folder && folder.trim() !== "") {
       options.folder = folder.trim();
     }
 
@@ -23,7 +25,7 @@ const uploadBufferToCloudinary = (buffer, folder = '') => {
           return reject(error);
         }
         resolve(result);
-      }
+      },
     );
 
     uploadStream.end(buffer);
