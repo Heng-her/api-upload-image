@@ -9,7 +9,9 @@ const uploadMedia = async (req, res, next) => {
     }
 
     const folder = req.sanitizedFolder || '';
-    const result = await uploadBufferToCloudinary(file.buffer, folder, 'auto');
+    const isVideo = (file.mimetype && file.mimetype.startsWith('video/')) || (req.files && !!req.files.video?.[0]) || req.path.includes('/videos');
+    const resourceType = isVideo ? 'video' : 'auto';
+    const result = await uploadBufferToCloudinary(file.buffer, folder, resourceType, file.mimetype);
 
     return res.status(200).json({
       publicId: result.public_id,

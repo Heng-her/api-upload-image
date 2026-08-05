@@ -8,16 +8,18 @@ const { getAccountConfig } = cloudinary;
  * @param {string} resourceType - Resource type ("auto", "image", "video")
  * @returns {Promise<Object>} Cloudinary upload result
  */
-const uploadBufferToCloudinary = (buffer, folder = "", resourceType = "auto") => {
+const uploadBufferToCloudinary = (buffer, folder = "", resourceType = "auto", mimeType = "") => {
   return new Promise((resolve, reject) => {
-    const accountConfig = getAccountConfig(resourceType);
+    const isVideo = resourceType === "video" || (mimeType && mimeType.startsWith("video/"));
+    const accountConfig = getAccountConfig(isVideo ? "video" : "image");
+    const effectiveResourceType = isVideo ? "video" : resourceType;
 
     const options = {
       ...accountConfig,
-      resource_type: resourceType,
+      resource_type: effectiveResourceType,
     };
 
-    if (resourceType === "image") {
+    if (effectiveResourceType === "image") {
       options.format = "webp";
       options.quality = "auto";
     }
