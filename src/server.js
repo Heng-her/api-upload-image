@@ -38,11 +38,13 @@ app.use("/api", ipBlocker);
 // Apply API Key authentication for protected API routes
 app.use("/api", apiKeyMiddleware);
 
-// GET Image Details with nested folder support: GET /api/images/*
+// GET Image & Video Details with nested folder support: GET /api/images/* or GET /api/videos/*
 app.get("/api/images/*", uploadController.getImageDetails);
+app.get("/api/videos/*", uploadController.getVideoDetails);
 
-// DELETE Image with nested folder support: DELETE /api/images/*
+// DELETE Image & Video with nested folder support: DELETE /api/images/* or DELETE /api/videos/*
 app.delete("/api/images/*", uploadController.deleteImage);
+app.delete("/api/videos/*", uploadController.deleteVideo);
 
 // Upload endpoint with rate limiting: POST /api/* (e.g. /api/upload, /api/avatar, /api/blog/2026/july)
 app.use("/api", uploadRateLimiter, uploadRoutes);
@@ -51,8 +53,9 @@ app.use("/api", uploadRateLimiter, uploadRoutes);
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
+      const maxMb = Math.round((parseInt(process.env.MAX_UPLOAD_BYTES, 10) || 100 * 1024 * 1024) / (1024 * 1024));
       return res.status(400).json({
-        error: "File size limit exceeded. Maximum allowed size is 5MB.",
+        error: `File size limit exceeded. Maximum allowed size is ${maxMb}MB.`,
       });
     }
     return res.status(400).json({

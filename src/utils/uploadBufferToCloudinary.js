@@ -6,13 +6,16 @@ const cloudinary = require("../cloudinary");
  * @param {string} folder - Destination folder path in Cloudinary
  * @returns {Promise<Object>} Cloudinary upload result
  */
-const uploadBufferToCloudinary = (buffer, folder = "") => {
+const uploadBufferToCloudinary = (buffer, folder = "", resourceType = "auto") => {
   return new Promise((resolve, reject) => {
     const options = {
-      resource_type: "image",
-      format: "webp",
-      quality: "auto",
+      resource_type: resourceType,
     };
+
+    if (resourceType === "image") {
+      options.format = "webp";
+      options.quality = "auto";
+    }
 
     if (folder && folder.trim() !== "") {
       options.folder = folder.trim();

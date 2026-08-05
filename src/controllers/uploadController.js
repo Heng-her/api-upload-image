@@ -1,21 +1,23 @@
 const cloudinary = require('../cloudinary');
 const uploadBufferToCloudinary = require('../utils/uploadBufferToCloudinary');
 
-const uploadImage = async (req, res, next) => {
+const uploadMedia = async (req, res, next) => {
   try {
-    const file = req.file || (req.files && (req.files.image?.[0] || req.files.file?.[0]));
+    const file = req.file || (req.files && (req.files.video?.[0] || req.files.image?.[0] || req.files.file?.[0]));
     if (!file) {
-      return res.status(400).json({ error: 'No image file provided.' });
+      return res.status(400).json({ error: 'No media file (image or video) provided.' });
     }
 
     const folder = req.sanitizedFolder || '';
-    const result = await uploadBufferToCloudinary(file.buffer, folder);
+    const result = await uploadBufferToCloudinary(file.buffer, folder, 'auto');
 
     return res.status(200).json({
       publicId: result.public_id,
       url: result.secure_url || result.url,
+      resourceType: result.resource_type,
       width: result.width,
       height: result.height,
+      duration: result.duration || null,
       format: result.format,
       bytes: result.bytes,
       createdAt: result.created_at
@@ -25,7 +27,7 @@ const uploadImage = async (req, res, next) => {
   }
 };
 
-const getImageDetails = async (req, res, next) => {
+const fetchResourceDetails = async (req, res, next, defaultResourceType = 'image') => {
   try {
     const rawPublicId = req.params[0] || req.params.publicId;
 
@@ -34,29 +36,47 @@ const getImageDetails = async (req, res, next) => {
     }
 
     const cleanPublicId = rawPublicId.replace(/^\/+|\/+$/g, '');
+    const resourceType = req.query.resource_type || defaultResourceType;
 
-    const result = await cloudinary.api.resource(cleanPublicId, {
-      resource_type: 'image'
-    });
+    let result;
+    try {
+      result = await cloudinary.api.resource(cleanPublicId, {
+        resource_type: resourceType
+      });
+    } catch (err) {
+      if (err && err.http_code === 404 && resourceType !== 'video' && !req.query.resource_type) {
+        // Fallback to video if default image lookup fails
+        result = await cloudinary.api.resource(cleanPublicId, {
+          resource_type: 'video'
+        });
+      } else {
+        throw err;
+      }
+    }
 
     return res.status(200).json({
       publicId: result.public_id,
       url: result.secure_url || result.url,
+      resourceType: result.resource_type,
       width: result.width,
       height: result.height,
+      duration: result.duration || null,
       format: result.format,
       bytes: result.bytes,
       createdAt: result.created_at
     });
   } catch (error) {
     if (error && error.http_code === 404) {
-      return res.status(404).json({ error: 'Image not found.' });
+      return res.status(404).json({ error: 'Media resource not found.' });
     }
     next(error);
   }
 };
 
-const deleteImage = async (req, res, next) => {
+const getImageDetails = (req, res, next) => fetchResourceDetails(req, res, next, 'image');
+const getVideoDetails = (req, res, next) => fetchResourceDetails(req, res, next, 'video');
+
+const deleteResource = async (req, res, next, defaultResourceType = 'image') => {
   try {
     const rawPublicId = req.params[0] || req.params.publicId;
 
@@ -65,18 +85,27 @@ const deleteImage = async (req, res, next) => {
     }
 
     const cleanPublicId = rawPublicId.replace(/^\/+|\/+$/g, '');
+    const resourceType = req.query.resource_type || defaultResourceType;
 
-    const result = await cloudinary.uploader.destroy(cleanPublicId, {
-      resource_type: 'image',
+    let result = await cloudinary.uploader.destroy(cleanPublicId, {
+      resource_type: resourceType,
       invalidate: true
     });
 
+    if (result.result === 'not_found' && resourceType !== 'video' && !req.query.resource_type) {
+      // Fallback destroy attempt with video
+      result = await cloudinary.uploader.destroy(cleanPublicId, {
+        resource_type: 'video',
+        invalidate: true
+      });
+    }
+
     if (result.result === 'not_found') {
-      return res.status(404).json({ error: 'Image not found.' });
+      return res.status(404).json({ error: 'Media resource not found.' });
     }
 
     return res.status(200).json({
-      message: 'Image deleted successfully.',
+      message: 'Media resource deleted successfully.',
       publicId: cleanPublicId,
       result: result.result
     });
@@ -85,8 +114,14 @@ const deleteImage = async (req, res, next) => {
   }
 };
 
+const deleteImage = (req, res, next) => deleteResource(req, res, next, 'image');
+const deleteVideo = (req, res, next) => deleteResource(req, res, next, 'video');
+
 module.exports = {
-  uploadImage,
+  uploadImage: uploadMedia,
+  uploadMedia,
   getImageDetails,
-  deleteImage
+  getVideoDetails,
+  deleteImage,
+  deleteVideo
 };

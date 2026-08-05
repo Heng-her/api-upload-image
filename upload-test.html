@@ -171,13 +171,14 @@
       </div>
 
       <div id="dropzone">
-        Click or drag an image here
-        <input type="file" id="fileInput" accept="image/*" />
+        Click or drag an image or video here
+        <input type="file" id="fileInput" accept="image/*,video/*,.mp4,.mov,.webm,.avi" />
       </div>
 
       <img id="preview" alt="Preview" />
+      <video id="videoPreview" controls style="display:none; margin-top:16px; max-width:100%; max-height:240px; border-radius:8px;"></video>
 
-      <button id="uploadBtn" disabled>Upload Image</button>
+      <button id="uploadBtn" disabled>Upload File</button>
 
       <div id="status"></div>
       <div id="result"></div>
@@ -190,6 +191,7 @@
       const dropzone = document.getElementById("dropzone");
       const fileInput = document.getElementById("fileInput");
       const preview = document.getElementById("preview");
+      const videoPreview = document.getElementById("videoPreview");
       const uploadBtn = document.getElementById("uploadBtn");
       const status = document.getElementById("status");
       const result = document.getElementById("result");
@@ -222,13 +224,24 @@
       });
 
       function handleFile(file) {
-        if (!file.type.startsWith("image/")) {
-          showStatus("Please choose a valid image file.", "error");
+        const isImage = file.type.startsWith("image/");
+        const isVideo = file.type.startsWith("video/") || /\.(mp4|mov|webm|avi|mkv)$/i.test(file.name);
+        if (!isImage && !isVideo) {
+          showStatus("Please choose a valid image or video file.", "error");
           return;
         }
+
         selectedFile = file;
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = "block";
+        if (isVideo) {
+          preview.style.display = "none";
+          videoPreview.src = URL.createObjectURL(file);
+          videoPreview.style.display = "block";
+        } else {
+          videoPreview.style.display = "none";
+          preview.src = URL.createObjectURL(file);
+          preview.style.display = "block";
+        }
+
         uploadBtn.disabled = false;
         status.textContent = "";
         status.className = "";
@@ -239,7 +252,7 @@
         if (!selectedFile) return;
 
         uploadBtn.disabled = true;
-        showStatus("Uploading image to Cloudinary...", "");
+        showStatus("Uploading file to Cloudinary...", "");
         result.innerHTML = "";
 
         const baseUrl = serverUrlInput.value.trim().replace(/\/+$/, "");
@@ -248,8 +261,9 @@
           ? `${baseUrl}/api/${folder}`
           : `${baseUrl}/api`;
 
+        const isVideo = selectedFile.type.startsWith("video/") || /\.(mp4|mov|webm|avi|mkv)$/i.test(selectedFile.name);
         const formData = new FormData();
-        formData.append("image", selectedFile);
+        formData.append(isVideo ? "video" : "image", selectedFile);
 
         const headers = {};
         const apiKey = apiKeyInput.value.trim();
@@ -273,11 +287,16 @@
           }
 
           showStatus("Upload successful!", "success");
+          const mediaHtml = (data.resourceType === "video" || isVideo)
+            ? `<video src="${data.url}" controls style="max-width:100%; border-radius:8px; margin-top:10px;"></video>`
+            : `<img src="${data.url}" alt="Uploaded image">`;
+
           result.innerHTML = `
             <p><strong>Public ID:</strong> ${data.publicId}</p>
-            <p><strong>Size:</strong> ${data.width} × ${data.height} (${data.format}, ${data.bytes} bytes)</p>
+            <p><strong>Type:</strong> ${data.resourceType || (isVideo ? 'video' : 'image')}</p>
+            <p><strong>Size:</strong> ${data.width || '-'} × ${data.height || '-'} (${data.format}, ${data.bytes} bytes)</p>
             <p><strong>URL:</strong> <a href="${data.url}" target="_blank" rel="noopener">${data.url}</a></p>
-            <img src="${data.url}" alt="Uploaded image">
+            ${mediaHtml}
           `;
         } catch (err) {
           showStatus("Error: " + err.message, "error");

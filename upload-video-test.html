@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cloudinary Video Upload & Player Test</title>
+    <style>
+      :root {
+        --primary: #4f46e5;
+        --primary-hover: #4338ca;
+        --bg: #0f172a;
+        --card-bg: #1e293b;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: #334155;
+        --success: #22c55e;
+        --error: #ef4444;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        max-width: 640px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+
+      .card {
+        background: var(--card-bg);
+        padding: 28px;
+        border-radius: 16px;
+        box-shadow:
+          0 10px 25px -5px rgba(0, 0, 0, 0.3),
+          0 8px 10px -6px rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+      }
+
+      h1 {
+        font-size: 1.6rem;
+        margin-top: 0;
+        margin-bottom: 8px;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      p.subtitle {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-top: 0;
+        margin-bottom: 24px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        background-color: #0f172a;
+        color: #fff;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25);
+      }
+
+      #dropzone {
+        border: 2px dashed var(--border);
+        border-radius: 12px;
+        padding: 36px 20px;
+        text-align: center;
+        cursor: pointer;
+        color: var(--text-muted);
+        background: #0f172a;
+        transition:
+          border-color 0.2s,
+          background 0.2s;
+        margin-top: 20px;
+      }
+
+      #dropzone.dragover,
+      #dropzone:hover {
+        border-color: var(--primary);
+        background: #1e1b4b;
+        color: #c7d2fe;
+      }
+
+      #dropzone .icon {
+        font-size: 2.5rem;
+        margin-bottom: 8px;
+        display: block;
+      }
+
+      #fileInput {
+        display: none;
+      }
+
+      .preview-container {
+        margin-top: 20px;
+        display: none;
+        background: #0f172a;
+        border-radius: 12px;
+        padding: 12px;
+        border: 1px solid var(--border);
+      }
+
+      .preview-container label {
+        margin-bottom: 8px;
+      }
+
+      video {
+        width: 100%;
+        max-height: 320px;
+        border-radius: 8px;
+        background-color: #000;
+        outline: none;
+      }
+
+      .btn {
+        margin-top: 20px;
+        width: 100%;
+        padding: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        background: var(--primary);
+        color: white;
+        cursor: pointer;
+        transition:
+          background-color 0.2s,
+          transform 0.1s;
+      }
+
+      .btn:hover:not(:disabled) {
+        background: var(--primary-hover);
+      }
+
+      .btn:active:not(:disabled) {
+        transform: scale(0.99);
+      }
+
+      .btn:disabled {
+        background: #475569;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .btn-danger {
+        background: #dc2626;
+        margin-top: 10px;
+      }
+
+      .btn-danger:hover:not(:disabled) {
+        background: #b91c1c;
+      }
+
+      .btn-secondary {
+        background: #334155;
+        margin-top: 10px;
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: #475569;
+      }
+
+      #status {
+        margin-top: 20px;
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+        border-radius: 8px;
+        padding: 0;
+      }
+
+      #status.active {
+        padding: 12px 16px;
+      }
+
+      #status.error {
+        color: #fca5a5;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+
+      #status.success {
+        color: #86efac;
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+
+      #status.info {
+        color: #93c5fd;
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+
+      #result {
+        margin-top: 24px;
+        display: none;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .meta-item {
+        background: #0f172a;
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+
+      .meta-item span.lbl {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        display: block;
+        text-transform: uppercase;
+      }
+
+      .meta-item span.val {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #fff;
+        word-break: break-all;
+      }
+
+      .url-box {
+        background: #0f172a;
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .url-box a {
+        color: #818cf8;
+        text-decoration: none;
+        word-break: break-all;
+        font-size: 0.9rem;
+      }
+
+      .url-box a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>🎬 Video Upload & Player Test</h1>
+      <p class="subtitle">
+        Upload videos to Cloudinary and stream them directly in your browser.
+      </p>
+
+      <div class="form-group">
+        <label for="serverUrl">Server Base URL</label>
+        <input
+          type="text"
+          id="serverUrl"
+          value="http://localhost:3001"
+          placeholder="http://localhost:3001"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="uploadFolder">Target Folder (Optional)</label>
+        <input
+          type="text"
+          id="uploadFolder"
+          value="videos"
+          placeholder="e.g. videos or courses/2026"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="apiKey">API Key (x-api-key header)</label>
+        <input
+          type="text"
+          id="apiKey"
+          value="crypten-api-key"
+          placeholder="Enter API Key"
+        />
+      </div>
+
+      <div id="dropzone">
+        <span class="icon">📹</span>
+        <strong>Click or drag a video file here</strong>
+        <div style="font-size: 0.8rem; margin-top: 6px">
+          Supported formats: MP4, MOV, WEBM, AVI, MKV
+        </div>
+        <input
+          type="file"
+          id="fileInput"
+          accept="video/*,.mp4,.mov,.webm,.avi,.mkv"
+        />
+      </div>
+
+      <div class="preview-container" id="localPreviewContainer">
+        <label>Selected Local Video Preview</label>
+        <video id="localPreview" controls></video>
+      </div>
+
+      <button id="uploadBtn" class="btn" disabled>Upload Video</button>
+
+      <div id="status"></div>
+
+      <div id="result">
+        <h3 style="margin-top: 24px; margin-bottom: 12px; color: #fff">
+          Uploaded Cloudinary Video
+        </h3>
+        <video
+          id="cloudPlayer"
+          controls
+          autoplay
+          style="margin-bottom: 16px"
+        ></video>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="lbl">Public ID</span>
+            <span class="val" id="resPublicId">-</span>
+          </div>
+          <div class="meta-item">
+            <span class="lbl">Resource Type</span>
+            <span class="val" id="resType">-</span>
+          </div>
+          <div class="meta-item">
+            <span class="lbl">Resolution</span>
+            <span class="val" id="resDimension">-</span>
+          </div>
+          <div class="meta-item">
+            <span class="lbl">Duration</span>
+            <span class="val" id="resDuration">-</span>
+          </div>
+          <div class="meta-item">
+            <span class="lbl">Format</span>
+            <span class="val" id="resFormat">-</span>
+          </div>
+          <div class="meta-item">
+            <span class="lbl">Size</span>
+            <span class="val" id="resBytes">-</span>
+          </div>
+        </div>
+
+        <div class="url-box">
+          <a id="resUrl" href="#" target="_blank" rel="noopener">Video Link</a>
+        </div>
+
+        <button id="getDetailsBtn" class="btn btn-secondary">
+          Fetch Cloudinary Video Details
+        </button>
+        <button id="deleteBtn" class="btn btn-danger">
+          Delete Video from Cloudinary
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const serverUrlInput = document.getElementById("serverUrl");
+      const uploadFolderInput = document.getElementById("uploadFolder");
+      const apiKeyInput = document.getElementById("apiKey");
+      const dropzone = document.getElementById("dropzone");
+      const fileInput = document.getElementById("fileInput");
+      const localPreviewContainer = document.getElementById(
+        "localPreviewContainer",
+      );
+      const localPreview = document.getElementById("localPreview");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const status = document.getElementById("status");
+      const result = document.getElementById("result");
+      const cloudPlayer = document.getElementById("cloudPlayer");
+      const getDetailsBtn = document.getElementById("getDetailsBtn");
+      const deleteBtn = document.getElementById("deleteBtn");
+
+      let selectedFile = null;
+      let lastUploadedPublicId = null;
+
+      dropzone.addEventListener("click", () => fileInput.click());
+
+      dropzone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+
+      dropzone.addEventListener("dragleave", () => {
+        dropzone.classList.remove("dragover");
+      });
+
+      dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("dragover");
+        if (e.dataTransfer.files.length) {
+          handleFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      fileInput.addEventListener("change", () => {
+        if (fileInput.files.length) {
+          handleFile(fileInput.files[0]);
+        }
+      });
+
+      function handleFile(file) {
+        if (
+          !file.type.startsWith("video/") &&
+          !/\.(mp4|mov|webm|avi|mkv)$/i.test(file.name)
+        ) {
+          showStatus(
+            "Please select a valid video file (MP4, MOV, WEBM, AVI, MKV).",
+            "error",
+          );
+          return;
+        }
+
+        selectedFile = file;
+        localPreview.src = URL.createObjectURL(file);
+        localPreviewContainer.style.display = "block";
+        uploadBtn.disabled = false;
+        showStatus(
+          `Selected: ${file.name} (${formatBytes(file.size)})`,
+          "info",
+        );
+      }
+
+      uploadBtn.addEventListener("click", async () => {
+        if (!selectedFile) return;
+
+        uploadBtn.disabled = true;
+        showStatus(
+          "Uploading video to Cloudinary... Please wait, processing...",
+          "info",
+        );
+        result.style.display = "none";
+
+        const baseUrl = serverUrlInput.value.trim().replace(/\/+$/, "");
+        const folder = uploadFolderInput.value.trim().replace(/^\/+|\/+$/g, "");
+        const targetEndpoint = folder
+          ? `${baseUrl}/api/${folder}`
+          : `${baseUrl}/api`;
+
+        const formData = new FormData();
+        formData.append("video", selectedFile);
+
+        const headers = {};
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) {
+          headers["x-api-key"] = apiKey;
+        }
+
+        try {
+          const res = await fetch(targetEndpoint, {
+            method: "POST",
+            headers: headers,
+            body: formData,
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(
+              data.error || `Upload failed with status ${res.status}`,
+            );
+          }
+
+          lastUploadedPublicId = data.publicId;
+          showStatus("Video uploaded successfully to Cloudinary!", "success");
+          displayResult(data);
+        } catch (err) {
+          showStatus("Error: " + err.message, "error");
+        } finally {
+          uploadBtn.disabled = false;
+        }
+      });
+
+      getDetailsBtn.addEventListener("click", async () => {
+        if (!lastUploadedPublicId) return;
+
+        showStatus("Fetching details from Cloudinary...", "info");
+        const baseUrl = serverUrlInput.value.trim().replace(/\/+$/, "");
+        const targetEndpoint = `${baseUrl}/api/videos/${lastUploadedPublicId}?resource_type=video`;
+
+        const headers = {};
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) headers["x-api-key"] = apiKey;
+
+        try {
+          const res = await fetch(targetEndpoint, { headers });
+          const data = await res.json();
+          if (!res.ok)
+            throw new Error(data.error || "Failed to fetch video details");
+
+          showStatus("Fetched latest video details!", "success");
+          displayResult(data);
+        } catch (err) {
+          showStatus("Error: " + err.message, "error");
+        }
+      });
+
+      deleteBtn.addEventListener("click", async () => {
+        if (!lastUploadedPublicId) return;
+        if (
+          !confirm(
+            `Are you sure you want to delete "${lastUploadedPublicId}" from Cloudinary?`,
+          )
+        )
+          return;
+
+        showStatus("Deleting video from Cloudinary...", "info");
+        const baseUrl = serverUrlInput.value.trim().replace(/\/+$/, "");
+        const targetEndpoint = `${baseUrl}/api/videos/${lastUploadedPublicId}?resource_type=video`;
+
+        const headers = {};
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) headers["x-api-key"] = apiKey;
+
+        try {
+          const res = await fetch(targetEndpoint, {
+            method: "DELETE",
+            headers,
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Failed to delete video");
+
+          showStatus(
+            `Video deleted successfully! (${data.publicId})`,
+            "success",
+          );
+          result.style.display = "none";
+          lastUploadedPublicId = null;
+        } catch (err) {
+          showStatus("Error: " + err.message, "error");
+        }
+      });
+
+      function displayResult(data) {
+        document.getElementById("resPublicId").textContent =
+          data.publicId || "-";
+        document.getElementById("resType").textContent =
+          data.resourceType || "video";
+        document.getElementById("resDimension").textContent =
+          data.width && data.height ? `${data.width} × ${data.height}` : "N/A";
+        document.getElementById("resDuration").textContent = data.duration
+          ? `${data.duration.toFixed(1)} sec`
+          : "N/A";
+        document.getElementById("resFormat").textContent = data.format || "-";
+        document.getElementById("resBytes").textContent = data.bytes
+          ? formatBytes(data.bytes)
+          : "-";
+
+        const urlElem = document.getElementById("resUrl");
+        urlElem.href = data.url;
+        urlElem.textContent = data.url;
+
+        cloudPlayer.src = data.url;
+        result.style.display = "block";
+      }
+
+      function showStatus(text, cls) {
+        status.textContent = text;
+        status.className = "active " + cls;
+      }
+
+      function formatBytes(bytes, decimals = 2) {
+        if (!bytes) return "0 Bytes";
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ["Bytes", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return (
+          parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
+        );
+      }
+    </script>
+  </body>
+</html>
