@@ -37,16 +37,20 @@ const fetchResourceDetails = async (req, res, next, defaultResourceType = 'image
 
     const cleanPublicId = rawPublicId.replace(/^\/+|\/+$/g, '');
     const resourceType = req.query.resource_type || defaultResourceType;
+    const accountConfig = cloudinary.getAccountConfig ? cloudinary.getAccountConfig(resourceType) : {};
 
     let result;
     try {
       result = await cloudinary.api.resource(cleanPublicId, {
+        ...accountConfig,
         resource_type: resourceType
       });
     } catch (err) {
       if (err && err.http_code === 404 && resourceType !== 'video' && !req.query.resource_type) {
         // Fallback to video if default image lookup fails
+        const videoAccountConfig = cloudinary.getAccountConfig ? cloudinary.getAccountConfig('video') : {};
         result = await cloudinary.api.resource(cleanPublicId, {
+          ...videoAccountConfig,
           resource_type: 'video'
         });
       } else {
@@ -86,15 +90,19 @@ const deleteResource = async (req, res, next, defaultResourceType = 'image') => 
 
     const cleanPublicId = rawPublicId.replace(/^\/+|\/+$/g, '');
     const resourceType = req.query.resource_type || defaultResourceType;
+    const accountConfig = cloudinary.getAccountConfig ? cloudinary.getAccountConfig(resourceType) : {};
 
     let result = await cloudinary.uploader.destroy(cleanPublicId, {
+      ...accountConfig,
       resource_type: resourceType,
       invalidate: true
     });
 
     if (result.result === 'not_found' && resourceType !== 'video' && !req.query.resource_type) {
       // Fallback destroy attempt with video
+      const videoAccountConfig = cloudinary.getAccountConfig ? cloudinary.getAccountConfig('video') : {};
       result = await cloudinary.uploader.destroy(cleanPublicId, {
+        ...videoAccountConfig,
         resource_type: 'video',
         invalidate: true
       });

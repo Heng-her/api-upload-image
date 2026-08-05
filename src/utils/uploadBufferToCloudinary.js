@@ -1,14 +1,19 @@
 const cloudinary = require("../cloudinary");
+const { getAccountConfig } = cloudinary;
 
 /**
  * Uploads a file buffer to Cloudinary using upload_stream.
  * @param {Buffer} buffer - File buffer from multer memoryStorage
  * @param {string} folder - Destination folder path in Cloudinary
+ * @param {string} resourceType - Resource type ("auto", "image", "video")
  * @returns {Promise<Object>} Cloudinary upload result
  */
 const uploadBufferToCloudinary = (buffer, folder = "", resourceType = "auto") => {
   return new Promise((resolve, reject) => {
+    const accountConfig = getAccountConfig(resourceType);
+
     const options = {
+      ...accountConfig,
       resource_type: resourceType,
     };
 
