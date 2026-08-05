@@ -1,46 +1,83 @@
 # Cloudinary Upload API
 
-A minimal Express backend that lets users upload images and videos, storing them in Cloudinary.
+A high-performance Express backend for uploading, hosting, and managing **Images** and **Videos** using Cloudinary.
 
-## Setup
+Supports streaming uploads directly from memory, dual Cloudinary accounts (separate accounts for Images & Videos), rate limiting, IP security, dynamic destination folders, and HTML web player test UIs.
+
+---
+
+## Features
+
+- 📸 **Image Uploads**: Supports JPG, JPEG, PNG, WEBP, GIF (converts to optimized WEBP by default).
+- 🎬 **Video Uploads**: Supports MP4, MOV, WEBM, AVI, MKV, OGG, 3GP, M4V.
+- ⚡ **Zero Disk Storage**: Streams buffer uploads directly into Cloudinary memory storage.
+- 🔐 **Dual Cloudinary Accounts**: Option to route image uploads to **Account 1** and video uploads to **Account 2**.
+- 🛡️ **Security**: API key protection (`x-api-key`), rate limiting, IP blocker middleware, and Helmet headers.
+- 📂 **Dynamic Folders**: Specify target folders dynamically via endpoint paths (e.g. `/api/avatars` or `/api/courses/2026`).
+
+---
+
+## Setup & Environment Variables
 
 ```bash
 npm install
 cp .env.example .env
 ```
 
-Edit `.env` and fill in your real Cloudinary credentials (found at
-https://console.cloudinary.com/app/settings/api-keys):
+Edit `.env` to configure your Cloudinary credentials and upload limits:
 
-```
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-API_KEY=crypten-api-key
+```env
+# Account 1 - Images
+CLOUDINARY_CLOUD_NAME=your_image_cloud_name
+CLOUDINARY_API_KEY=your_image_api_key
+CLOUDINARY_API_SECRET=your_image_api_secret
+
+# Account 2 - Videos (Optional; falls back to Account 1 if empty)
+CLOUDINARY_VIDEO_CLOUD_NAME=your_video_cloud_name
+CLOUDINARY_VIDEO_API_KEY=your_video_api_key
+CLOUDINARY_VIDEO_API_SECRET=your_video_api_secret
+
+# Server Configuration
+PORT=3000
+API_KEY=your_secret_api_key
+
+# Upload & Rate Limits
+MAX_UPLOAD_BYTES=52428800 # 50MB max upload size
+RATE_LIMIT_WINDOW_MINUTES=15
+RATE_LIMIT_MAX_UPLOADS=100
 ```
 
-`.env` is already listed in `.gitignore` — never commit real credentials.
+---
 
 ## Run
 
 ```bash
+# Production mode
 npm start
-# or for auto-reload during development:
+
+# Development mode (with auto-reload)
 npm run dev
 ```
 
-Server runs on `http://localhost:3000` by default (change with `PORT` in `.env`).
+The server runs on `http://localhost:3000` (or the port specified in `.env`).
 
-## Testing UI
+---
 
-- Open `upload-test.html` in your browser for image & video testing.
-- Open `upload-video-test.html` in your browser for dedicated video upload and live video playback testing.
+## Testing Web UIs
 
-## Endpoints
+- **`upload-test.html`**: General testing UI for image and video uploads.
+- **`upload-video-test.html`**: Dedicated video testing UI with local video preview, progress indicator, and live Cloudinary video playback streaming.
 
-### `POST /api/:folder?` (e.g. `/api/videos` or `/api/uploads`)
+---
 
-Upload an image or video. Send as `multipart/form-data` with field name `video`, `image`, or `file`. Requires `x-api-key` header.
+## API Endpoints
+
+### 1. Upload Image or Video
+
+**`POST /api/:folder?`** (e.g. `/api/uploads` or `/api/videos`)
+
+Header: `x-api-key: <your_api_key>`  
+Form-Data fields accepted: `image`, `video`, or `file`.
 
 ```bash
 curl -X POST http://localhost:3000/api/videos \
@@ -48,45 +85,52 @@ curl -X POST http://localhost:3000/api/videos \
   -F "video=@/path/to/sample.mp4"
 ```
 
-Response:
+**Response (`200 OK`):**
 
 ```json
 {
-  "publicId": "videos/abcd1234",
-  "url": "https://res.cloudinary.com/.../videos/abcd1234.mp4",
+  "publicId": "videos/sample_abcd123",
+  "url": "https://res.cloudinary.com/cloud_name/video/upload/v1722850000/videos/sample_abcd123.mp4",
   "resourceType": "video",
   "width": 1920,
   "height": 1080,
-  "duration": 12.4,
+  "duration": 15.4,
   "format": "mp4",
-  "bytes": 5242880,
-  "createdAt": "2026-08-05T09:50:00Z"
+  "bytes": 12450800,
+  "createdAt": "2026-08-05T10:00:00Z"
 }
 ```
 
-### `GET /api/images/*` or `GET /api/videos/*`
+---
 
-Fetch metadata for a previously uploaded image or video.
+### 2. Fetch Media Details
 
-```bash
-curl -H "x-api-key: crypten-api-key" http://localhost:3000/api/videos/videos/abcd1234
-```
-
-### `DELETE /api/images/*` or `DELETE /api/videos/*`
-
-Delete an image or video from Cloudinary.
+**`GET /api/images/*`** or **`GET /api/videos/*`**
 
 ```bash
-curl -X DELETE -H "x-api-key: crypten-api-key" http://localhost:3000/api/videos/videos/abcd1234
+# Fetch video metadata
+curl -H "x-api-key: crypten-api-key" http://localhost:3000/api/videos/videos/sample_abcd123
+
+# Fetch image metadata
+curl -H "x-api-key: crypten-api-key" http://localhost:3000/api/images/uploads/my_photo
 ```
 
-### `GET /health`
+---
 
-Basic health check.
+### 3. Delete Media
 
-## Notes
+**`DELETE /api/images/*`** or **`DELETE /api/videos/*`**
 
-- Uploaded files are streamed straight to Cloudinary from memory — nothing is written to local disk on the server.
-- Max upload size defaults to 100MB (`MAX_UPLOAD_BYTES` in `.env`).
-- Accepts image formats (`jpg`, `jpeg`, `png`, `webp`, `gif`) and video formats (`mp4`, `mov`, `webm`, `avi`, `mkv`, `ogv`).
-- Credentials are read from environment variables only.
+```bash
+curl -X DELETE -H "x-api-key: crypten-api-key" http://localhost:3000/api/videos/videos/sample_abcd123
+```
+
+---
+
+### 4. Health Check
+
+**`GET /health`** (Unauthenticated)
+
+```json
+{ "status": "ok" }
+```
