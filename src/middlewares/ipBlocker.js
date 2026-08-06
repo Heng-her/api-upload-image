@@ -6,6 +6,12 @@ const blockIP = (ip) => {
 };
 
 const ipBlocker = (req, res, next) => {
+  const bypassHeader = req.headers["x-api-bypass"];
+  const secretBypass = process.env.API_BYPASS_KEY || "crypten-bypass-secret";
+  if (bypassHeader && bypassHeader === secretBypass) {
+    return next();
+  }
+
   const clientIP = req.ip || req.socket.remoteAddress;
 
   if (blockedIPs.has(clientIP)) {

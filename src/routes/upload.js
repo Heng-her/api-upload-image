@@ -4,7 +4,9 @@ const upload = require("../middlewares/upload");
 const sanitizeFolder = require("../middlewares/sanitizeFolder");
 const uploadController = require("../controllers/uploadController");
 
-const uploadMiddleware = upload.fields([
+const { dynamicUploadFieldsMiddleware } = upload;
+
+const uploadMiddleware = dynamicUploadFieldsMiddleware([
   { name: "image", maxCount: 1 },
   { name: "video", maxCount: 1 },
   { name: "file", maxCount: 1 },

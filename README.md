@@ -45,6 +45,9 @@ API_KEY=your_secret_api_key
 MAX_UPLOAD_BYTES=52428800 # 50MB max upload size
 RATE_LIMIT_WINDOW_MINUTES=15
 RATE_LIMIT_MAX_UPLOADS=100
+
+# Secret Key to bypass rate limits and file size limits
+API_BYPASS_KEY=youris-bypass-secret
 ```
 
 ---
@@ -79,13 +82,15 @@ The server runs on `http://localhost:3000` (or the port specified in `.env`).
 Header: `x-api-key: <your_api_key>`  
 Form-Data fields accepted: `image`, `video`, or `file`.
 
+**Upload Video Example:**
+
 ```bash
 curl -X POST http://localhost:3000/api/videos \
-  -H "x-api-key: crypten-api-key" \
+  -H "x-api-key: youris-api-key" \
   -F "video=@/path/to/sample.mp4"
 ```
 
-**Response (`200 OK`):**
+**Video Response (`200 OK`):**
 
 ```json
 {
@@ -101,6 +106,30 @@ curl -X POST http://localhost:3000/api/videos \
 }
 ```
 
+**Upload Image Example:**
+
+```bash
+curl -X POST http://localhost:3000/api/uploads \
+  -H "x-api-key: youris-api-key" \
+  -F "image=@/path/to/photo.jpg"
+```
+
+**Image Response (`200 OK`):**
+
+```json
+{
+  "publicId": "uploads/photo_xyz789",
+  "url": "https://res.cloudinary.com/cloud_name/image/upload/v1722850000/uploads/photo_xyz789.webp",
+  "resourceType": "image",
+  "width": 1200,
+  "height": 800,
+  "duration": null,
+  "format": "webp",
+  "bytes": 245678,
+  "createdAt": "2026-08-05T10:00:00Z"
+}
+```
+
 ---
 
 ### 2. Fetch Media Details
@@ -109,10 +138,10 @@ curl -X POST http://localhost:3000/api/videos \
 
 ```bash
 # Fetch video metadata
-curl -H "x-api-key: crypten-api-key" http://localhost:3000/api/videos/videos/sample_abcd123
+curl -H "x-api-key: youris-api-key" http://localhost:3000/api/videos/videos/sample_abcd123
 
 # Fetch image metadata
-curl -H "x-api-key: crypten-api-key" http://localhost:3000/api/images/uploads/my_photo
+curl -H "x-api-key: youris-api-key" http://localhost:3000/api/images/uploads/my_photo
 ```
 
 ---
@@ -122,7 +151,7 @@ curl -H "x-api-key: crypten-api-key" http://localhost:3000/api/images/uploads/my
 **`DELETE /api/images/*`** or **`DELETE /api/videos/*`**
 
 ```bash
-curl -X DELETE -H "x-api-key: crypten-api-key" http://localhost:3000/api/videos/videos/sample_abcd123
+curl -X DELETE -H "x-api-key: youris-api-key" http://localhost:3000/api/videos/videos/sample_abcd123
 ```
 
 ---

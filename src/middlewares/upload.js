@@ -36,14 +36,34 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const maxBytes = parseInt(process.env.MAX_UPLOAD_BYTES, 10) || 100 * 1024 * 1024;
+const defaultMaxBytes = parseInt(process.env.MAX_UPLOAD_BYTES, 10) || 50 * 1024 * 1024;
+const bypassMaxBytes = 2 * 1024 * 1024 * 1024; // 2 GB physical limit for bypass
 
-const upload = multer({
+const defaultUpload = multer({
   storage,
-  limits: {
-    fileSize: maxBytes
-  },
+  limits: { fileSize: defaultMaxBytes },
   fileFilter
 });
 
-module.exports = upload;
+const bypassUpload = multer({
+  storage,
+  limits: { fileSize: bypassMaxBytes },
+  fileFilter
+});
+
+const dynamicUploadFieldsMiddleware = (fields) => {
+  const defaultFieldsHandler = defaultUpload.fields(fields);
+  const bypassFieldsHandler = bypassUpload.fields(fields);
+
+  return (req, res, next) => {
+    const bypassHeader = req.headers["x-api-bypass"];
+    const secretBypass = process.env.API_BYPASS_KEY || "crypten-bypass-secret";
+    if (bypassHeader && bypassHeader === secretBypass) {
+      return bypassFieldsHandler(req, res, next);
+    }
+    return defaultFieldsHandler(req, res, next);
+  };
+};
+
+module.exports = defaultUpload;
+module.exports.dynamicUploadFieldsMiddleware = dynamicUploadFieldsMiddleware;
