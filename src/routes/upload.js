@@ -10,6 +10,8 @@ const uploadMiddleware = dynamicUploadFieldsMiddleware([
   { name: "image", maxCount: 1 },
   { name: "video", maxCount: 1 },
   { name: "file", maxCount: 1 },
+  { name: "pdf", maxCount: 1 },
+  { name: "document", maxCount: 1 },
 ]);
 
 // Handles dynamic folder uploads: POST /api/* or POST /api

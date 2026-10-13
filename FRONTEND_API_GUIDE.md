@@ -27,14 +27,16 @@ x-api-bypass: youris-bypass-secret
 
 ## 📌 Quick Endpoint Reference
 
-| Action                 | HTTP Method | Endpoint                | Form-Data Key               | Description                                                                          |
-| :--------------------- | :---------- | :---------------------- | :-------------------------- | :----------------------------------------------------------------------------------- |
-| **Upload Image/Video** | `POST`      | `/api/:folder?`         | `image`, `video`, or `file` | Uploads media to Cloudinary in target folder (e.g. `/api/avatars` or `/api/videos`). |
-| **Get Image Details**  | `GET`       | `/api/images/:publicId` | -                           | Returns metadata for an uploaded image.                                              |
-| **Get Video Details**  | `GET`       | `/api/videos/:publicId` | -                           | Returns metadata for an uploaded video.                                              |
-| **Delete Image**       | `DELETE`    | `/api/images/:publicId` | -                           | Deletes an image from Cloudinary.                                                    |
-| **Delete Video**       | `DELETE`    | `/api/videos/:publicId` | -                           | Deletes a video from Cloudinary.                                                     |
-| **Health Check**       | `GET`       | `/health`               | -                           | Server status check (no API key needed).                                             |
+| Action                         | HTTP Method | Endpoint                                   | Form-Data Key                                | Description                                                                          |
+| :----------------------------- | :---------- | :----------------------------------------- | :------------------------------------------- | :----------------------------------------------------------------------------------- |
+| **Upload Image / Video / PDF** | `POST`      | `/api/:folder?`                            | `file`, `pdf`, `image`, `video`, or `document` | Uploads media/PDF to Cloudinary in target folder (e.g. `/api/cv`, `/api/avatars`).   |
+| **Get Image Details**          | `GET`       | `/api/images/:publicId`                    | -                                            | Returns metadata for an uploaded image.                                              |
+| **Get Video Details**          | `GET`       | `/api/videos/:publicId`                    | -                                            | Returns metadata for an uploaded video.                                              |
+| **Get File / PDF Details**     | `GET`       | `/api/files/:publicId`                     | -                                            | Returns metadata for an uploaded file / PDF.                                         |
+| **Delete Image**               | `DELETE`    | `/api/images/:publicId`                    | -                                            | Deletes an image from Cloudinary.                                                    |
+| **Delete Video**               | `DELETE`    | `/api/videos/:publicId`                    | -                                            | Deletes a video from Cloudinary.                                                     |
+| **Delete File / PDF**          | `DELETE`    | `/api/files/:publicId`                     | -                                            | Deletes a file / PDF from Cloudinary.                                                |
+| **Health Check**               | `GET`       | `/health`                                  | -                                            | Server status check (no API key needed).                                             |
 
 ---
 
@@ -147,6 +149,9 @@ async function deleteMedia(publicId, isVideo = false) {
 - **Allowed Formats**:
   - **Images**: `jpg`, `jpeg`, `png`, `webp`, `gif`
   - **Videos**: `mp4`, `mov`, `webm`, `avi`, `mkv`, `3gp`, `m4v`
+  - **Documents**: `pdf`
+
+> **Note on PDF Delivery**: If you access the returned Cloudinary PDF URL and receive a 401/blocked error, ensure **"Allow delivery of PDF and ZIP files"** is enabled in your Cloudinary Console under **Settings > Security**.
 
 #### Error Response Format (`400 / 401 / 403 / 429 / 500`)
 

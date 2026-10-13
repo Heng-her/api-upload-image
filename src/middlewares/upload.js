@@ -17,12 +17,15 @@ const allowedMimeTypes = [
   'video/ogg',
   'video/3gpp',
   'video/x-m4v',
-  'video/mpeg'
+  'video/mpeg',
+  'application/pdf',
+  'application/x-pdf'
 ];
 
 const allowedExtensions = [
   '.jpg', '.jpeg', '.png', '.webp', '.gif',
-  '.mp4', '.mov', '.webm', '.avi', '.mkv', '.ogv', '.3gp', '.m4v', '.mpeg', '.mpg'
+  '.mp4', '.mov', '.webm', '.avi', '.mkv', '.ogv', '.3gp', '.m4v', '.mpeg', '.mpg',
+  '.pdf'
 ];
 
 const fileFilter = (req, file, cb) => {
@@ -32,7 +35,7 @@ const fileFilter = (req, file, cb) => {
   if (allowedMimeTypes.includes(mimeType) && allowedExtensions.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error(`Invalid file type (${mimeType}). Only image and video files are allowed.`), false);
+    cb(new Error(`Invalid file type (${mimeType}). Only image, video, and PDF files are allowed.`), false);
   }
 };
 

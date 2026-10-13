@@ -3,22 +3,30 @@ const uploadBufferToCloudinary = require('../utils/uploadBufferToCloudinary');
 
 const uploadMedia = async (req, res, next) => {
   try {
-    const file = req.file || (req.files && (req.files.video?.[0] || req.files.image?.[0] || req.files.file?.[0]));
+    const file =
+      req.file ||
+      (req.files &&
+        (req.files.pdf?.[0] ||
+          req.files.file?.[0] ||
+          req.files.document?.[0] ||
+          req.files.video?.[0] ||
+          req.files.image?.[0]));
     if (!file) {
-      return res.status(400).json({ error: 'No media file (image or video) provided.' });
+      return res.status(400).json({ error: 'No media file (image, video, or PDF) provided.' });
     }
 
     const folder = req.sanitizedFolder || '';
     const isVideo = (file.mimetype && file.mimetype.startsWith('video/')) || (req.files && !!req.files.video?.[0]) || req.path.includes('/videos');
     const resourceType = isVideo ? 'video' : 'auto';
-    const result = await uploadBufferToCloudinary(file.buffer, folder, resourceType, file.mimetype);
+    const result = await uploadBufferToCloudinary(file.buffer, folder, resourceType, file.mimetype, file.originalname);
 
     return res.status(200).json({
       publicId: result.public_id,
       url: result.secure_url || result.url,
       resourceType: result.resource_type,
-      width: result.width,
-      height: result.height,
+      width: result.width || null,
+      height: result.height || null,
+      pages: result.pages || null,
       duration: result.duration || null,
       format: result.format,
       bytes: result.bytes,
@@ -48,13 +56,30 @@ const fetchResourceDetails = async (req, res, next, defaultResourceType = 'image
         resource_type: resourceType
       });
     } catch (err) {
-      if (err && err.http_code === 404 && resourceType !== 'video' && !req.query.resource_type) {
-        // Fallback to video if default image lookup fails
-        const videoAccountConfig = cloudinary.getAccountConfig ? cloudinary.getAccountConfig('video') : {};
-        result = await cloudinary.api.resource(cleanPublicId, {
-          ...videoAccountConfig,
-          resource_type: 'video'
-        });
+      if (err && err.http_code === 404 && !req.query.resource_type) {
+        // Fallback sequence: image -> video -> raw
+        const fallbackTypes = ['video', 'raw'].filter((t) => t !== resourceType);
+        let found = false;
+
+        for (const fbType of fallbackTypes) {
+          try {
+            const fbConfig = cloudinary.getAccountConfig ? cloudinary.getAccountConfig(fbType) : {};
+            result = await cloudinary.api.resource(cleanPublicId, {
+              ...fbConfig,
+              resource_type: fbType
+            });
+            found = true;
+            break;
+          } catch (fbErr) {
+            if (!fbErr || fbErr.http_code !== 404) {
+              throw fbErr;
+            }
+          }
+        }
+
+        if (!found) {
+          throw err;
+        }
       } else {
         throw err;
       }
@@ -64,8 +89,9 @@ const fetchResourceDetails = async (req, res, next, defaultResourceType = 'image
       publicId: result.public_id,
       url: result.secure_url || result.url,
       resourceType: result.resource_type,
-      width: result.width,
-      height: result.height,
+      width: result.width || null,
+      height: result.height || null,
+      pages: result.pages || null,
       duration: result.duration || null,
       format: result.format,
       bytes: result.bytes,
@@ -81,6 +107,8 @@ const fetchResourceDetails = async (req, res, next, defaultResourceType = 'image
 
 const getImageDetails = (req, res, next) => fetchResourceDetails(req, res, next, 'image');
 const getVideoDetails = (req, res, next) => fetchResourceDetails(req, res, next, 'video');
+const getFileDetails = (req, res, next) => fetchResourceDetails(req, res, next, 'image');
+const getRawDetails = (req, res, next) => fetchResourceDetails(req, res, next, 'raw');
 
 const deleteResource = async (req, res, next, defaultResourceType = 'image') => {
   try {
@@ -100,14 +128,20 @@ const deleteResource = async (req, res, next, defaultResourceType = 'image') => 
       invalidate: true
     });
 
-    if (result.result === 'not_found' && resourceType !== 'video' && !req.query.resource_type) {
-      // Fallback destroy attempt with video
-      const videoAccountConfig = cloudinary.getAccountConfig ? cloudinary.getAccountConfig('video') : {};
-      result = await cloudinary.uploader.destroy(cleanPublicId, {
-        ...videoAccountConfig,
-        resource_type: 'video',
-        invalidate: true
-      });
+    if (result.result === 'not_found' && !req.query.resource_type) {
+      // Fallback sequence: image -> video -> raw
+      const fallbackTypes = ['video', 'raw'].filter((t) => t !== resourceType);
+      for (const fbType of fallbackTypes) {
+        const fbConfig = cloudinary.getAccountConfig ? cloudinary.getAccountConfig(fbType) : {};
+        result = await cloudinary.uploader.destroy(cleanPublicId, {
+          ...fbConfig,
+          resource_type: fbType,
+          invalidate: true
+        });
+        if (result.result !== 'not_found') {
+          break;
+        }
+      }
     }
 
     if (result.result === 'not_found') {
@@ -126,12 +160,18 @@ const deleteResource = async (req, res, next, defaultResourceType = 'image') => 
 
 const deleteImage = (req, res, next) => deleteResource(req, res, next, 'image');
 const deleteVideo = (req, res, next) => deleteResource(req, res, next, 'video');
+const deleteFile = (req, res, next) => deleteResource(req, res, next, 'image');
+const deleteRaw = (req, res, next) => deleteResource(req, res, next, 'raw');
 
 module.exports = {
   uploadImage: uploadMedia,
   uploadMedia,
   getImageDetails,
   getVideoDetails,
+  getFileDetails,
+  getRawDetails,
   deleteImage,
-  deleteVideo
+  deleteVideo,
+  deleteFile,
+  deleteRaw
 };

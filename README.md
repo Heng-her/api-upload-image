@@ -10,6 +10,7 @@ Supports streaming uploads directly from memory, dual Cloudinary accounts (separ
 
 - 📸 **Image Uploads**: Supports JPG, JPEG, PNG, WEBP, GIF (converts to optimized WEBP by default).
 - 🎬 **Video Uploads**: Supports MP4, MOV, WEBM, AVI, MKV, OGG, 3GP, M4V.
+- 📄 **PDF / Document Uploads**: Supports PDF files (maintains document format and returns page count).
 - ⚡ **Zero Disk Storage**: Streams buffer uploads directly into Cloudinary memory storage.
 - 🔐 **Dual Cloudinary Accounts**: Option to route image uploads to **Account 1** and video uploads to **Account 2**.
 - 🛡️ **Security**: API key protection (`x-api-key`), rate limiting, IP blocker middleware, and Helmet headers.
@@ -75,12 +76,37 @@ The server runs on `http://localhost:3000` (or the port specified in `.env`).
 
 ## API Endpoints
 
-### 1. Upload Image or Video
+### 1. Upload Image, Video, or PDF
 
-**`POST /api/:folder?`** (e.g. `/api/uploads` or `/api/videos`)
+**`POST /api/:folder?`** (e.g. `/api/uploads`, `/api/cv`, or `/api/videos`)
 
 Header: `x-api-key: <your_api_key>`  
-Form-Data fields accepted: `image`, `video`, or `file`.
+Form-Data fields accepted: `file`, `pdf`, `image`, `video`, or `document`.
+
+**Upload PDF Example:**
+
+```bash
+curl -X POST http://localhost:3000/api/cv \
+  -H "x-api-key: youris-api-key" \
+  -F "pdf=@/path/to/resume.pdf"
+```
+
+**PDF Response (`200 OK`):**
+
+```json
+{
+  "publicId": "cv/resume_abc123",
+  "url": "https://res.cloudinary.com/cloud_name/image/upload/v1722850000/cv/resume_abc123.pdf",
+  "resourceType": "image",
+  "width": null,
+  "height": null,
+  "pages": 2,
+  "duration": null,
+  "format": "pdf",
+  "bytes": 105230,
+  "createdAt": "2026-08-05T10:00:00Z"
+}
+```
 
 **Upload Video Example:**
 
@@ -132,9 +158,9 @@ curl -X POST http://localhost:3000/api/uploads \
 
 ---
 
-### 2. Fetch Media Details
+### 2. Fetch Media / File Details
 
-**`GET /api/images/*`** or **`GET /api/videos/*`**
+**`GET /api/images/*`**, **`GET /api/videos/*`**, or **`GET /api/files/*`**
 
 ```bash
 # Fetch video metadata
@@ -142,16 +168,19 @@ curl -H "x-api-key: youris-api-key" http://localhost:3000/api/videos/videos/samp
 
 # Fetch image metadata
 curl -H "x-api-key: youris-api-key" http://localhost:3000/api/images/uploads/my_photo
+
+# Fetch PDF / file metadata
+curl -H "x-api-key: youris-api-key" http://localhost:3000/api/files/cv/resume_abc123
 ```
 
 ---
 
-### 3. Delete Media
+### 3. Delete Media / File
 
-**`DELETE /api/images/*`** or **`DELETE /api/videos/*`**
+**`DELETE /api/images/*`**, **`DELETE /api/videos/*`**, or **`DELETE /api/files/*`**
 
 ```bash
-curl -X DELETE -H "x-api-key: youris-api-key" http://localhost:3000/api/videos/videos/sample_abcd123
+curl -X DELETE -H "x-api-key: youris-api-key" http://localhost:3000/api/files/cv/resume_abc123
 ```
 
 ---

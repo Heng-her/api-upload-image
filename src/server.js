@@ -38,13 +38,17 @@ app.use("/api", ipBlocker);
 // Apply API Key authentication for protected API routes
 app.use("/api", apiKeyMiddleware);
 
-// GET Image & Video Details with nested folder support: GET /api/images/* or GET /api/videos/*
+// GET Image, Video & File Details with nested folder support: GET /api/images/* or GET /api/videos/* or GET /api/files/*
 app.get("/api/images/*", uploadController.getImageDetails);
 app.get("/api/videos/*", uploadController.getVideoDetails);
+app.get("/api/files/*", uploadController.getFileDetails);
+app.get("/api/raw/*", uploadController.getRawDetails);
 
-// DELETE Image & Video with nested folder support: DELETE /api/images/* or DELETE /api/videos/*
+// DELETE Image, Video & File with nested folder support: DELETE /api/images/* or DELETE /api/videos/* or DELETE /api/files/*
 app.delete("/api/images/*", uploadController.deleteImage);
 app.delete("/api/videos/*", uploadController.deleteVideo);
+app.delete("/api/files/*", uploadController.deleteFile);
+app.delete("/api/raw/*", uploadController.deleteRaw);
 
 // Upload endpoint with rate limiting: POST /api/* (e.g. /api/upload, /api/avatar, /api/blog/2026/july)
 app.use("/api", uploadRateLimiter, uploadRoutes);

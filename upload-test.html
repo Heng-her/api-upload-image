@@ -171,12 +171,17 @@
       </div>
 
       <div id="dropzone">
-        Click or drag an image or video here
-        <input type="file" id="fileInput" accept="image/*,video/*,.mp4,.mov,.webm,.avi" />
+        Click or drag an image, video, or PDF here
+        <input type="file" id="fileInput" accept="image/*,video/*,.mp4,.mov,.webm,.avi,.pdf,application/pdf" />
       </div>
 
       <img id="preview" alt="Preview" />
       <video id="videoPreview" controls style="display:none; margin-top:16px; max-width:100%; max-height:240px; border-radius:8px;"></video>
+      <div id="pdfPreview" style="display:none; margin-top:16px; padding:16px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb; text-align:center;">
+        <span style="font-size:32px;">📄</span>
+        <div id="pdfFilename" style="font-weight:600; margin-top:8px; word-break:break-all;"></div>
+        <div id="pdfFilesize" style="font-size:0.85rem; color:#6b7280; margin-top:4px;"></div>
+      </div>
 
       <button id="uploadBtn" disabled>Upload File</button>
 
@@ -192,6 +197,9 @@
       const fileInput = document.getElementById("fileInput");
       const preview = document.getElementById("preview");
       const videoPreview = document.getElementById("videoPreview");
+      const pdfPreview = document.getElementById("pdfPreview");
+      const pdfFilename = document.getElementById("pdfFilename");
+      const pdfFilesize = document.getElementById("pdfFilesize");
       const uploadBtn = document.getElementById("uploadBtn");
       const status = document.getElementById("status");
       const result = document.getElementById("result");
@@ -224,20 +232,28 @@
       });
 
       function handleFile(file) {
+        const isPdf = file.type === "application/pdf" || file.type === "application/x-pdf" || /\.pdf$/i.test(file.name);
         const isImage = file.type.startsWith("image/");
         const isVideo = file.type.startsWith("video/") || /\.(mp4|mov|webm|avi|mkv)$/i.test(file.name);
-        if (!isImage && !isVideo) {
-          showStatus("Please choose a valid image or video file.", "error");
+
+        if (!isImage && !isVideo && !isPdf) {
+          showStatus("Please choose a valid image, video, or PDF file.", "error");
           return;
         }
 
         selectedFile = file;
-        if (isVideo) {
-          preview.style.display = "none";
+        preview.style.display = "none";
+        videoPreview.style.display = "none";
+        pdfPreview.style.display = "none";
+
+        if (isPdf) {
+          pdfFilename.textContent = file.name;
+          pdfFilesize.textContent = (file.size / 1024).toFixed(1) + " KB";
+          pdfPreview.style.display = "block";
+        } else if (isVideo) {
           videoPreview.src = URL.createObjectURL(file);
           videoPreview.style.display = "block";
         } else {
-          videoPreview.style.display = "none";
           preview.src = URL.createObjectURL(file);
           preview.style.display = "block";
         }
@@ -261,9 +277,12 @@
           ? `${baseUrl}/api/${folder}`
           : `${baseUrl}/api`;
 
+        const isPdf = selectedFile.type === "application/pdf" || selectedFile.type === "application/x-pdf" || /\.pdf$/i.test(selectedFile.name);
         const isVideo = selectedFile.type.startsWith("video/") || /\.(mp4|mov|webm|avi|mkv)$/i.test(selectedFile.name);
+        const fieldName = isPdf ? "pdf" : (isVideo ? "video" : "image");
+
         const formData = new FormData();
-        formData.append(isVideo ? "video" : "image", selectedFile);
+        formData.append(fieldName, selectedFile);
 
         const headers = {};
         const apiKey = apiKeyInput.value.trim();
@@ -287,14 +306,25 @@
           }
 
           showStatus("Upload successful!", "success");
-          const mediaHtml = (data.resourceType === "video" || isVideo)
-            ? `<video src="${data.url}" controls style="max-width:100%; border-radius:8px; margin-top:10px;"></video>`
-            : `<img src="${data.url}" alt="Uploaded image">`;
+          let mediaHtml = "";
+          if (isPdf || data.format === "pdf") {
+            mediaHtml = `
+              <div style="margin-top:12px;">
+                <p>📄 <strong>PDF Document</strong>: <a href="${data.url}" target="_blank" rel="noopener" style="color:#2563eb; font-weight:600;">Open / Download PDF</a></p>
+                <iframe src="${data.url}" width="100%" height="320" style="border:1px solid #d1d5db; border-radius:8px; margin-top:8px;"></iframe>
+              </div>`;
+          } else if (data.resourceType === "video" || isVideo) {
+            mediaHtml = `<video src="${data.url}" controls style="max-width:100%; border-radius:8px; margin-top:10px;"></video>`;
+          } else {
+            mediaHtml = `<img src="${data.url}" alt="Uploaded image">`;
+          }
 
           result.innerHTML = `
             <p><strong>Public ID:</strong> ${data.publicId}</p>
-            <p><strong>Type:</strong> ${data.resourceType || (isVideo ? 'video' : 'image')}</p>
-            <p><strong>Size:</strong> ${data.width || '-'} × ${data.height || '-'} (${data.format}, ${data.bytes} bytes)</p>
+            <p><strong>Type:</strong> ${data.resourceType || (isPdf ? 'pdf' : (isVideo ? 'video' : 'image'))}</p>
+            <p><strong>Format:</strong> ${data.format || '-'} (${data.bytes} bytes)</p>
+            ${data.pages ? `<p><strong>Pages:</strong> ${data.pages}</p>` : ''}
+            ${data.width && data.height ? `<p><strong>Dimensions:</strong> ${data.width} × ${data.height}</p>` : ''}
             <p><strong>URL:</strong> <a href="${data.url}" target="_blank" rel="noopener">${data.url}</a></p>
             ${mediaHtml}
           `;
