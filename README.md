@@ -1,20 +1,21 @@
 # Cloudinary Upload API
 
-A high-performance Express backend for uploading, hosting, and managing **Images** and **Videos** using Cloudinary.
+A high-performance Express backend for uploading, hosting, and managing **Images**, **Videos**, and **Files** (PDF, JSON, CSV, Docs, Archives, etc.) using Cloudinary.
 
-Supports streaming uploads directly from memory, dual Cloudinary accounts (separate accounts for Images & Videos), rate limiting, IP security, dynamic destination folders, and HTML web player test UIs.
+Supports streaming uploads directly from memory, dual Cloudinary accounts (separate accounts for Images/Raw & Videos), rate limiting, IP security, dynamic destination folders, and HTML test UIs.
 
 ---
 
 ## Features
 
+- 📁 **All File Types Supported**: Upload JSON, PDF, TXT, CSV, DOCX, XLSX, ZIP, and more via `/upload/file`.
 - 📸 **Image Uploads**: Supports JPG, JPEG, PNG, WEBP, GIF (converts to optimized WEBP by default).
-- 🎬 **Video Uploads**: Supports MP4, MOV, WEBM, AVI, MKV, OGG, 3GP, M4V.
+- 🎬 **Video Uploads**: Supports MP4, MOV, WEBM, AVI, MKV, OGG, 3GP, M4V, and audio files.
 - 📄 **PDF / Document Uploads**: Supports PDF files (maintains document format and returns page count).
 - ⚡ **Zero Disk Storage**: Streams buffer uploads directly into Cloudinary memory storage.
-- 🔐 **Dual Cloudinary Accounts**: Option to route image uploads to **Account 1** and video uploads to **Account 2**.
+- 🔐 **Dual Cloudinary Accounts**: Option to route image/raw uploads to **Account 1** and video uploads to **Account 2**.
 - 🛡️ **Security**: API key protection (`x-api-key`), rate limiting, IP blocker middleware, and Helmet headers.
-- 📂 **Dynamic Folders**: Specify target folders dynamically via endpoint paths (e.g. `/api/avatars` or `/api/courses/2026`).
+- 📂 **Dynamic Folders**: Specify target folders dynamically via query `?folder=...` or path (e.g. `/api/avatars` or `/api/courses/2026`).
 
 ---
 

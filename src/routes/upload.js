@@ -4,17 +4,44 @@ const upload = require("../middlewares/upload");
 const sanitizeFolder = require("../middlewares/sanitizeFolder");
 const uploadController = require("../controllers/uploadController");
 
-const { dynamicUploadFieldsMiddleware } = upload;
+const { dynamicUploadMiddleware, dynamicUploadFieldsMiddleware } = upload;
 
-const uploadMiddleware = dynamicUploadFieldsMiddleware([
-  { name: "image", maxCount: 1 },
-  { name: "video", maxCount: 1 },
-  { name: "file", maxCount: 1 },
-  { name: "pdf", maxCount: 1 },
-  { name: "document", maxCount: 1 },
-]);
+const uploadMiddleware = dynamicUploadMiddleware
+  ? dynamicUploadMiddleware()
+  : dynamicUploadFieldsMiddleware([
+      { name: "file", maxCount: 1 },
+      { name: "image", maxCount: 1 },
+      { name: "video", maxCount: 1 },
+      { name: "pdf", maxCount: 1 },
+      { name: "document", maxCount: 1 },
+      { name: "raw", maxCount: 1 },
+      { name: "json", maxCount: 1 },
+    ]);
 
-// Handles dynamic folder uploads: POST /api/* or POST /api
+// Dedicated endpoints: POST /upload/file or POST /api/upload/file
+router.post(
+  "/file",
+  sanitizeFolder,
+  uploadMiddleware,
+  uploadController.uploadImage,
+);
+
+router.post(
+  "/upload/file",
+  sanitizeFolder,
+  uploadMiddleware,
+  uploadController.uploadImage,
+);
+
+// Handles root uploads: POST /api or POST /upload
+router.post(
+  "/",
+  sanitizeFolder,
+  uploadMiddleware,
+  uploadController.uploadImage,
+);
+
+// Handles dynamic folder uploads: POST /api/* or POST /upload/*
 router.post(
   "/*",
   sanitizeFolder,

@@ -29,13 +29,14 @@ x-api-bypass: youris-bypass-secret
 
 | Action                         | HTTP Method | Endpoint                                   | Form-Data Key                                | Description                                                                          |
 | :----------------------------- | :---------- | :----------------------------------------- | :------------------------------------------- | :----------------------------------------------------------------------------------- |
-| **Upload Image / Video / PDF** | `POST`      | `/api/:folder?`                            | `file`, `pdf`, `image`, `video`, or `document` | Uploads media/PDF to Cloudinary in target folder (e.g. `/api/cv`, `/api/avatars`).   |
+| **Upload Any File / JSON / Media** | `POST`      | `/upload/file` or `/api/upload/file`       | `file` (or any field name)                   | Uploads any file (JSON, PDF, Image, Video, CSV, ZIP, etc.) to Cloudinary. Optional folder via `?folder=...`. |
+| **Upload with Dynamic Folder** | `POST`      | `/api/:folder?`                            | `file`, `pdf`, `image`, `video`, or `document` | Uploads file/media to Cloudinary in target folder (e.g. `/api/cv`, `/api/avatars`).  |
 | **Get Image Details**          | `GET`       | `/api/images/:publicId`                    | -                                            | Returns metadata for an uploaded image.                                              |
 | **Get Video Details**          | `GET`       | `/api/videos/:publicId`                    | -                                            | Returns metadata for an uploaded video.                                              |
-| **Get File / PDF Details**     | `GET`       | `/api/files/:publicId`                     | -                                            | Returns metadata for an uploaded file / PDF.                                         |
+| **Get File / Raw Details**     | `GET`       | `/api/files/:publicId` or `/api/raw/:publicId` | -                                        | Returns metadata for an uploaded file / JSON / PDF / raw resource.                  |
 | **Delete Image**               | `DELETE`    | `/api/images/:publicId`                    | -                                            | Deletes an image from Cloudinary.                                                    |
 | **Delete Video**               | `DELETE`    | `/api/videos/:publicId`                    | -                                            | Deletes a video from Cloudinary.                                                     |
-| **Delete File / PDF**          | `DELETE`    | `/api/files/:publicId`                     | -                                            | Deletes a file / PDF from Cloudinary.                                                |
+| **Delete File / Raw**          | `DELETE`    | `/api/files/:publicId` or `/api/raw/:publicId` | -                                        | Deletes a file / JSON / PDF / raw resource from Cloudinary.                         |
 | **Health Check**               | `GET`       | `/health`                                  | -                                            | Server status check (no API key needed).                                             |
 
 ---

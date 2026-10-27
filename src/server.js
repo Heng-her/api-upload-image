@@ -32,26 +32,33 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-// Apply IP blocking check for protected API routes
+// Apply IP blocking check for protected API and upload routes
 app.use("/api", ipBlocker);
+app.use("/upload", ipBlocker);
 
-// Apply API Key authentication for protected API routes
+// Apply API Key authentication for protected API and upload routes
 app.use("/api", apiKeyMiddleware);
+app.use("/upload", apiKeyMiddleware);
 
-// GET Image, Video & File Details with nested folder support: GET /api/images/* or GET /api/videos/* or GET /api/files/*
+// GET Image, Video & File Details with nested folder support
 app.get("/api/images/*", uploadController.getImageDetails);
 app.get("/api/videos/*", uploadController.getVideoDetails);
 app.get("/api/files/*", uploadController.getFileDetails);
 app.get("/api/raw/*", uploadController.getRawDetails);
+app.get("/upload/files/*", uploadController.getFileDetails);
+app.get("/upload/raw/*", uploadController.getRawDetails);
 
-// DELETE Image, Video & File with nested folder support: DELETE /api/images/* or DELETE /api/videos/* or DELETE /api/files/*
+// DELETE Image, Video & File with nested folder support
 app.delete("/api/images/*", uploadController.deleteImage);
 app.delete("/api/videos/*", uploadController.deleteVideo);
 app.delete("/api/files/*", uploadController.deleteFile);
 app.delete("/api/raw/*", uploadController.deleteRaw);
+app.delete("/upload/files/*", uploadController.deleteFile);
+app.delete("/upload/raw/*", uploadController.deleteRaw);
 
-// Upload endpoint with rate limiting: POST /api/* (e.g. /api/upload, /api/avatar, /api/blog/2026/july)
+// Upload endpoints with rate limiting: POST /upload/file, POST /api/upload/file, POST /api/*
 app.use("/api", uploadRateLimiter, uploadRoutes);
+app.use("/upload", uploadRateLimiter, uploadRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

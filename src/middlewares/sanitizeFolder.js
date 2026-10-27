@@ -1,10 +1,22 @@
 const path = require('path');
 
 const sanitizeFolder = (req, res, next) => {
-  let rawFolder = req.params[0] || req.params.folder || '';
+  let rawFolder =
+    req.query?.folder ||
+    req.body?.folder ||
+    req.params[0] ||
+    req.params.folder ||
+    '';
+
+  // Normalize if path is just the endpoint name without an explicit folder
+  if (rawFolder === 'upload/file' || rawFolder === 'file') {
+    if (!req.query?.folder && !req.body?.folder) {
+      rawFolder = '';
+    }
+  }
 
   // Remove leading and trailing slashes
-  rawFolder = rawFolder.replace(/^\/+|\/+$/g, '');
+  rawFolder = String(rawFolder).trim().replace(/^\/+|\/+$/g, '');
 
   if (!rawFolder) {
     req.sanitizedFolder = '';
